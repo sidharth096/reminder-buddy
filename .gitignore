@@ -1,0 +1,15 @@
+# Build output
+dist/
+bin/
+obj/
+
+# Local editor and agent settings
+.vs/
+.vscode/
+.opencode/
+*.user
+*.suo
+
+# Logs and temporary files
+*.log
+*.tmp
