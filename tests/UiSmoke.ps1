@@ -19,6 +19,11 @@ try {
     }
     if (!$settings -or !$overlay) { throw 'Settings or overlay window did not appear.' }
     'PASS: Real settings and overlay windows opened'
+    foreach ($character in @('Buddy', 'Abu', 'Shibu', 'Tom')) {
+        $characterCondition = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, $character)
+        if (!$settings.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $characterCondition)) { throw "Missing character choice: $character" }
+    }
+    'PASS: All four character choices are accessible'
     $buttonCondition = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button)
     $buttons = $overlay.FindAll([System.Windows.Automation.TreeScope]::Descendants, $buttonCondition)
     $names = @($buttons | ForEach-Object { $_.Current.Name })

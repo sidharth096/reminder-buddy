@@ -12,6 +12,7 @@ Closing the settings window keeps the app running in the system tray. Double-cli
 
 - Fixed-time or interval schedules with selected weekdays and active hours, including overnight ranges.
 - Custom messages, optional system sounds, enable/disable, duplicate, delete and preview.
+- Per-reminder character selection: Buddy (default), Abu, Shibu, and Tom.
 - Persistent reminders walk in and stop; timed reminders walk left to right and auto-hide.
 - OK, Close and 5/10/15-minute snooze. Preview snooze only dismisses the preview.
 - One notification at a time, tray pause controls, optional sign-in startup and full-screen deferral.
@@ -25,6 +26,10 @@ Times use the PC's local clock in 24-hour format. Interval reminders fire at the
 After sleep, only a recent occurrence within five minutes is eligible, with at most one catch-up notification after a long clock gap. Older scheduled occurrences are skipped. Snoozes survive restarts, but expire after twelve hours overdue. While paused, occurrences are skipped; deferred full-screen notifications wait in a deduplicated in-memory queue. Queued, unshown notifications are not retained after exit. The app must be running and the PC awake to display a reminder; it does not wake the PC.
 
 The first version uses the primary monitor's working area. Standard apps are supported; the Windows security desktop and exclusive full-screen applications may prevent overlays. Extra characters, adjustable character size/speed, monitor selection and import/export are future scope. The supplied character is original vector artwork rather than the football player in the reference image.
+
+### Characters
+
+All four characters are original vector drawings rendered by WPF, so there are no image files to install and no flat pictures sliding across the screen. Arms and legs animate independently during movement, while persistent reminders switch to a standing pose. The characters use original names and artwork without team crests, sponsor marks, or imported photographs.
 
 ## Install (optional, current user)
 

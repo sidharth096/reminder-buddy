@@ -23,6 +23,7 @@ namespace ReminderBuddy
         [DataMember] public bool Persistent = true;
         [DataMember] public int DisplaySeconds = 15;
         [DataMember] public string Sound = "None";
+        [DataMember] public string CharacterId = "buddy";
         [DataMember] public DateTime LastDelivered = DateTime.MinValue;
 
         public Reminder Copy(bool newIdentity)
@@ -42,6 +43,7 @@ namespace ReminderBuddy
             if (IsInterval && StartMinutes == EndMinutes) return "Start and end times must be different.";
             if (DisplaySeconds < 5 || DisplaySeconds > 300) return "Auto-hide duration must be between 5 and 300 seconds.";
             if (Sound != "None" && Sound != "Chime" && Sound != "Bell") return "Select a valid sound.";
+            if (!CharacterCatalog.IsValid(CharacterId)) return "Select a valid character.";
             return null;
         }
 
@@ -54,6 +56,34 @@ namespace ReminderBuddy
             }
         }
         public static string FormatTime(int minutes) { return string.Format("{0:00}:{1:00}", minutes / 60, minutes % 60); }
+    }
+
+    public class CharacterChoice
+    {
+        public string Id;
+        public string Name;
+    }
+
+    public static class CharacterCatalog
+    {
+        public static readonly CharacterChoice[] All =
+        {
+            new CharacterChoice { Id = "buddy", Name = "Buddy" },
+            new CharacterChoice { Id = "abu", Name = "Abu" },
+            new CharacterChoice { Id = "shibu", Name = "Shibu" },
+            new CharacterChoice { Id = "tom", Name = "Tom" }
+        };
+
+        public static string NormalizeId(string id)
+        {
+            if (id == "original") return "buddy";
+            if (id == "mohanlal" || id == "mellow-monarch") return "abu";
+            if (id == "ronaldo" || id == "crimson-comet") return "shibu";
+            if (id == "messi" || id == "skyline-maestro") return "tom";
+            return string.IsNullOrEmpty(id) ? "buddy" : id;
+        }
+        public static bool IsValid(string id) { return All.Any(c => c.Id == NormalizeId(id)); }
+        public static CharacterChoice Find(string id) { return All.FirstOrDefault(c => c.Id == NormalizeId(id)) ?? All[0]; }
     }
 
     [DataContract]
@@ -143,6 +173,7 @@ namespace ReminderBuddy
                 var data = (Preferences)Serializer().ReadObject(stream);
                 if (data == null || data.Reminders == null) throw new SerializationException("Invalid settings.");
                 if (data.Snoozes == null) data.Snoozes = new List<SnoozedReminder>();
+                foreach (var reminder in data.Reminders) if (reminder != null) reminder.CharacterId = CharacterCatalog.NormalizeId(reminder.CharacterId);
                 if (data.Reminders.Any(r => r == null || string.IsNullOrWhiteSpace(r.Id) || r.Validate() != null) || data.Reminders.Select(r => r.Id).Distinct().Count() != data.Reminders.Count) throw new SerializationException("Invalid reminder.");
                 return data;
             }

@@ -17,6 +17,8 @@ namespace ReminderBuddy
         private readonly ComboBox schedule = new ComboBox(), display = new ComboBox(), sound = new ComboBox();
         private readonly TextBlock status = new TextBlock(), error = new TextBlock();
         private readonly StackPanel fixedFields = new StackPanel(), intervalFields = new StackPanel(), durationFields = new StackPanel();
+        private readonly WrapPanel characterPicker = new WrapPanel();
+        private string characterId = "buddy";
         private string editingId;
         private bool loading;
         private bool dirty;
@@ -92,6 +94,10 @@ namespace ReminderBuddy
             AddField(editor, "Reminder name", name); name.MaxLength = 80;
             message.AcceptsReturn = true; message.TextWrapping = TextWrapping.Wrap; message.Height = 72; message.MaxLength = 220;
             AddField(editor, "Message beside your character", message);
+            Label(editor, "Character");
+            characterPicker.Margin = new Thickness(0, 0, 0, 4);
+            editor.Children.Add(characterPicker);
+            BuildCharacterPicker();
             Label(editor, "Repeat on");
             var dayRow = new WrapPanel();
             for (int i = 0; i < 7; i++)
@@ -153,12 +159,12 @@ namespace ReminderBuddy
             schedule.SelectedIndex = r.IsInterval ? 1 : 0;
             time.Text = Reminder.FormatTime(r.TimeMinutes); start.Text = Reminder.FormatTime(r.StartMinutes); end.Text = Reminder.FormatTime(r.EndMinutes);
             interval.Text = r.IntervalMinutes.ToString(); duration.Text = r.DisplaySeconds.ToString(); display.SelectedIndex = r.Persistent ? 0 : 1;
-            sound.SelectedItem = r.Sound;
+            sound.SelectedItem = r.Sound; characterId = CharacterCatalog.Find(r.CharacterId).Id; UpdateCharacterPicker();
             loading = false; dirty = false; error.Text = "";
         }
         private bool ReadEditor(out Reminder r)
         {
-            r = new Reminder { Name = name.Text.Trim(), Message = message.Text.Trim(), Enabled = enabled.IsChecked == true, Days = 0, IsInterval = schedule.SelectedIndex == 1, Persistent = display.SelectedIndex == 0, Sound = sound.SelectedItem as string ?? "None" };
+            r = new Reminder { Name = name.Text.Trim(), Message = message.Text.Trim(), Enabled = enabled.IsChecked == true, Days = 0, IsInterval = schedule.SelectedIndex == 1, Persistent = display.SelectedIndex == 0, Sound = sound.SelectedItem as string ?? "None", CharacterId = characterId };
             for (int i = 0; i < 7; i++) if (days[i].IsChecked == true) r.Days |= 1 << i;
             int value;
             if (!TryTime(time.Text, out r.TimeMinutes)) { error.Text = "Enter a valid time, for example 17:30."; return false; }
@@ -172,6 +178,34 @@ namespace ReminderBuddy
         {
             DateTime parsed; bool ok = DateTime.TryParseExact(text.Trim(), new[] { "HH:mm", "H:mm" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed);
             minutes = ok ? parsed.Hour * 60 + parsed.Minute : 0; return ok;
+        }
+
+        private void BuildCharacterPicker()
+        {
+            characterPicker.Children.Clear();
+            foreach (var choice in CharacterCatalog.All)
+            {
+                var selected = choice;
+                var content = new StackPanel { Width = 92 };
+                var frame = new Border { Width = 70, Height = 76, CornerRadius = new CornerRadius(10), Background = Brush("#EDF2EE"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 5) };
+                frame.Child = new Walker { CharacterId = choice.Id, Width = 55, Height = 76, Walking = false };
+                content.Children.Add(frame);
+                content.Children.Add(new TextBlock { Text = choice.Name, FontSize = 11, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap });
+                var button = new Button { Tag = choice.Id, Content = content, Padding = new Thickness(5), Margin = new Thickness(0, 0, 8, 8), ToolTip = "Select " + choice.Name };
+                button.Click += delegate { characterId = selected.Id; UpdateCharacterPicker(); MarkDirty(); };
+                characterPicker.Children.Add(button);
+            }
+        }
+
+        private void UpdateCharacterPicker()
+        {
+            foreach (Button button in characterPicker.Children)
+            {
+                bool selected = (string)button.Tag == characterId;
+                button.BorderBrush = selected ? Brush("#165F49") : Brush("#D6DFD8");
+                button.BorderThickness = selected ? new Thickness(3) : new Thickness(1);
+                button.Background = selected ? Brush("#DDF0E7") : Brushes.White;
+            }
         }
 
         private void SaveReminder()

@@ -39,6 +39,10 @@ class CoreTests
             r.IntervalMinutes = 60;
             var copy = r.Copy(true);
             Check(copy.Id != r.Id && copy.Message == r.Message, "Duplicate has new identity");
+            Check(CharacterCatalog.Find("tom").Name == "Tom", "Known character selection");
+            Check(CharacterCatalog.Find("messi").Id == "tom", "First legacy character name migrates");
+            Check(CharacterCatalog.Find("skyline-maestro").Id == "tom", "Second legacy character name migrates");
+            Check(CharacterCatalog.Find("missing").Id == "buddy", "Missing character falls back safely");
             var store = new Store(Path.Combine(dir, "settings.json"));
             var data = new Preferences(); data.Reminders.Add(r);
             data.Snoozes.Add(new SnoozedReminder { ReminderId = r.Id, Due = Monday.AddMinutes(5) });
