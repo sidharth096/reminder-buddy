@@ -1,0 +1,91 @@
+name: Bug report
+description: Report a reproducible problem in Reminder Buddy
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Search existing issues first and do not include private reminder content or security vulnerabilities here.
+
+  - type: input
+    id: version
+    attributes:
+      label: Reminder Buddy version
+      description: Open Windows Settings → Apps → Installed apps, then find Reminder Buddy.
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: Installation method
+      options:
+        - Windows installer
+        - Portable ZIP
+        - PowerShell online installer
+        - Built from source
+    validations:
+      required: true
+
+  - type: input
+    id: windows-version
+    attributes:
+      label: Windows version
+      description: Press Win+R, enter `winver`, and copy the version and build.
+      placeholder: "Windows 11 24H2, build 26100"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Explain what you observed and what you expected instead.
+      placeholder: "The reminder... I expected..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the smallest sequence that reproduces the problem.
+      placeholder: |
+        1. Create a reminder with...
+        2. Close the settings window...
+        3. Wait until...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often does it happen?
+      options:
+        - Every time
+        - Sometimes
+        - Happened once
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Attach useful screenshots or paste `%LOCALAPPDATA%\ReminderBuddy\error.log`. Remove private reminder messages first.
+      render: text
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues for this problem.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true
+        - label: I removed private reminder text and personal information.
+          required: true

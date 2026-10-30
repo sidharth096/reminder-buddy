@@ -61,6 +61,8 @@ Found a bug or have an idea? [Open a GitHub issue](https://github.com/sidharth09
 
 Developers can use the [development and release guide](docs/DEVELOPMENT.md) to build, test, package, and publish the app.
 
+Want to contribute? Read [`CONTRIBUTING.md`](CONTRIBUTING.md). See [`CHANGELOG.md`](CHANGELOG.md) for released and upcoming changes.
+
 ## License
 
 Reminder Buddy is available under the [MIT License](LICENSE).

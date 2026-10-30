@@ -1,0 +1,60 @@
+name: Feature request
+description: Suggest a focused improvement to Reminder Buddy
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the problem before the solution. Search existing issues first so related ideas can stay together.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Explain when the problem occurs and who it affects.
+      placeholder: "When I..., I cannot..., which means..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the smallest useful behavior or workflow.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Note any current workaround or simpler option you tried.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Reminder setup
+        - Scheduling
+        - Character animation
+        - Notification overlay
+        - System tray and startup
+        - Installer and updates
+        - Accessibility
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues for this request.
+          required: true
+        - label: I described the problem, not only the desired implementation.
+          required: true
