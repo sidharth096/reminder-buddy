@@ -12,6 +12,16 @@ Use this guide to build, test, package, and release Reminder Buddy. Ordinary use
 
 There are no NuGet dependencies or .NET SDK installation steps.
 
+## App Icon
+
+`assets\ReminderBuddy.svg` is the editable, open-source icon source. Regenerate the multi-size Windows icon after changing it:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\generate-icon.ps1
+```
+
+Expected result: `assets\ReminderBuddy.ico` contains 16, 24, 32, 48, 64, 128, and 256-pixel images. The build embeds it in the executable, and the installer uses the same file.
+
 ## Build And Test
 
 Run from the repository root:

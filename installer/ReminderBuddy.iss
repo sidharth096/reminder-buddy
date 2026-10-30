@@ -36,6 +36,7 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 UninstallDisplayName={#AppName}
 UninstallDisplayIcon={app}\{#AppExeName}
+SetupIconFile={#SourceRoot}\assets\ReminderBuddy.ico
 CloseApplications=yes
 RestartApplications=no
 SetupMutex=ReminderBuddy-v1
@@ -45,7 +46,7 @@ MinVersion=10.0
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
+Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"
 Name: "startup"; Description: "Start Reminder Buddy when I sign in"; GroupDescription: "Startup:"; Flags: unchecked
 
 [Files]

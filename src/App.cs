@@ -67,7 +67,7 @@ namespace ReminderBuddy
             DispatcherUnhandledException += delegate(object sender, DispatcherUnhandledExceptionEventArgs e) { Log(e.Exception); MessageBox.Show(e.Exception.Message, "Reminder Buddy", MessageBoxButton.OK, MessageBoxImage.Error); e.Handled = true; };
             Settings = new SettingsWindow(this);
             MainWindow = Settings;
-            tray = new Forms.NotifyIcon { Icon = System.Drawing.SystemIcons.Information, Text = "Reminder Buddy", Visible = true };
+            tray = new Forms.NotifyIcon { Icon = System.Drawing.Icon.ExtractAssociatedIcon(Process.GetCurrentProcess().MainModule.FileName), Text = "Reminder Buddy", Visible = true };
             var menu = new Forms.ContextMenuStrip();
             menu.Items.Add("Open Reminder Buddy", null, delegate { OpenSettings(); });
             menu.Items.Add(new Forms.ToolStripSeparator());

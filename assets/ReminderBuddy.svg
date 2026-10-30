@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Reminder Buddy app icon</title>
+  <desc id="desc">A friendly mint reminder bell walking on a deep green rounded square.</desc>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="#12372f"/>
+  <path d="M42 202C78 218 174 218 214 199" fill="none" stroke="#0b2923" stroke-width="14" stroke-linecap="round" opacity=".65"/>
+  <path d="M70 144h116c-12-12-19-29-19-48 0-28-17-50-39-50S89 68 89 96c0 19-7 36-19 48Z" fill="#5bd5a5" stroke="#e8fff4" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M119 44c0-8 5-14 12-14s12 6 12 14" fill="none" stroke="#e8fff4" stroke-width="8" stroke-linecap="round"/>
+  <path d="M111 157c3 13 10 20 20 20s17-7 20-20" fill="#f6b95f" stroke="#e8fff4" stroke-width="7" stroke-linejoin="round"/>
+  <circle cx="111" cy="103" r="6" fill="#12372f"/>
+  <circle cx="147" cy="103" r="6" fill="#12372f"/>
+  <path d="M115 120c9 8 19 8 28 0" fill="none" stroke="#12372f" stroke-width="7" stroke-linecap="round"/>
+  <path d="M102 169 85 191 67 185" fill="none" stroke="#5bd5a5" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m157 169 17 22 19-6" fill="none" stroke="#5bd5a5" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="186" cy="63" r="24" fill="#f06b4f" stroke="#12372f" stroke-width="7"/>
+  <path d="M186 51v15" stroke="#fff7ed" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="186" cy="75" r="4" fill="#fff7ed"/>
+</svg>

@@ -11,6 +11,10 @@ $shortcut = $shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Prog
 $shortcut.TargetPath = Join-Path $target 'ReminderBuddy.exe'
 $shortcut.WorkingDirectory = $target
 $shortcut.Save()
+$desktopShortcut = $shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Desktop')) 'Reminder Buddy.lnk'))
+$desktopShortcut.TargetPath = Join-Path $target 'ReminderBuddy.exe'
+$desktopShortcut.WorkingDirectory = $target
+$desktopShortcut.Save()
 $run = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 if ((Get-ItemProperty -Path $run -Name ReminderBuddy -ErrorAction SilentlyContinue) -or (Get-ItemProperty -Path $run -Name TaskbarBuddy -ErrorAction SilentlyContinue)) {
     Set-ItemProperty -Path $run -Name ReminderBuddy -Value ('"' + (Join-Path $target 'ReminderBuddy.exe') + '" --background')

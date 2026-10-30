@@ -15,6 +15,7 @@ Reminder Buddy is for Windows users who want noticeable reminders without openin
 3. Open the downloaded file and follow the setup wizard.
 
 Reminder Buddy will be available from the Windows Start menu and **Settings → Apps → Installed apps**.
+The installer also creates a desktop shortcut by default; uncheck that option during setup if you do not want one.
 
 <details>
 <summary>Install with PowerShell</summary>

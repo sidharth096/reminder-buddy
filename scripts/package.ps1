@@ -20,6 +20,7 @@ Copy-Item -LiteralPath (Join-Path $root 'dist\ReminderBuddy.exe') -Destination $
 Copy-Item -LiteralPath (Join-Path $root 'LICENSE') -Destination $portable
 Copy-Item -LiteralPath (Join-Path $root 'README.md') -Destination $portable
 Copy-Item -LiteralPath (Join-Path $root 'VERSION') -Destination $portable
+Copy-Item -LiteralPath (Join-Path $root 'assets\ReminderBuddy.ico') -Destination $portable
 Compress-Archive -LiteralPath $portable -DestinationPath (Join-Path $release "$portableName.zip") -CompressionLevel Optimal
 Remove-Item -LiteralPath $portable -Recurse -Force
 

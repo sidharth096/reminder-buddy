@@ -4,6 +4,8 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Interop;
+using System.Windows.Media.Imaging;
 
 namespace ReminderBuddy
 {
@@ -27,6 +29,8 @@ namespace ReminderBuddy
         {
             app = owner;
             Title = "Reminder Buddy";
+            using (var icon = System.Drawing.Icon.ExtractAssociatedIcon(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName))
+                if (icon != null) Icon = Imaging.CreateBitmapSourceFromHIcon(icon.Handle, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
             Width = 1060; Height = 790; MinWidth = 850; MinHeight = 600;
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
             Background = Brush("#F3F5F1"); Foreground = Brush("#19352E");
