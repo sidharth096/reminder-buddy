@@ -31,7 +31,19 @@ The first version uses the primary monitor's working area. Standard apps are sup
 
 All four characters are original vector drawings rendered by WPF, so there are no image files to install and no flat pictures sliding across the screen. Arms and legs animate independently during movement, while persistent reminders switch to a standing pose. The characters use original names and artwork without team crests, sponsor marks, or imported photographs.
 
-## Install (optional, current user)
+## Install
+
+Download the latest `ReminderBuddy-Setup-<version>.exe` from [GitHub Releases](https://github.com/sidharth096/reminder-buddy/releases), double-click it, and follow the setup wizard. The installer adds Reminder Buddy to the Start Menu and Windows Installed apps. Administrator access is not required for the default per-user installation.
+
+After the first public release is published, PowerShell users can download the latest installer and verify its SHA-256 checksum with:
+
+```powershell
+irm https://raw.githubusercontent.com/sidharth096/reminder-buddy/main/scripts/install-online.ps1 | iex
+```
+
+Review [`scripts/install-online.ps1`](scripts/install-online.ps1) before running a script from the internet. The script downloads both the installer and `SHA256SUMS.txt` from the latest GitHub Release, refuses a checksum mismatch, and then opens the normal setup wizard.
+
+### Developer installation
 
 Run in PowerShell from this folder:
 
@@ -64,6 +76,16 @@ powershell -ExecutionPolicy Bypass -File .\tests\UiSmoke.ps1
 The smoke mode opens the real settings window and a five-second preview, then exits after eight seconds without changing reminders. Source is under `src`; scheduler and persistence assertions are in `tests\CoreTests.cs`.
 
 GitHub Actions runs `build.ps1 -Test` on every push and pull request using `.github/workflows/ci.yml`. Successful runs provide a temporary `ReminderBuddy-Windows` build artifact. The interactive UI smoke test remains a local check because hosted runners do not provide a reliable interactive Windows desktop.
+
+## Package and release
+
+Install Inno Setup 6, then create the installer, portable ZIP, and SHA-256 checksum file locally:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1
+```
+
+Artifacts are written to `release\`. `VERSION` is the single release version source. To publish a release, update `VERSION`, commit and push the change, wait for Windows CI to pass, then push a matching tag such as `v0.1.0`. `.github/workflows/release.yml` tests and packages that exact commit and creates a draft GitHub Release. Download and test the draft installer before publishing it.
 
 ## Manual QA
 
