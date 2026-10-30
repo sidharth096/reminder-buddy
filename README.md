@@ -63,6 +63,8 @@ powershell -ExecutionPolicy Bypass -File .\tests\UiSmoke.ps1
 
 The smoke mode opens the real settings window and a five-second preview, then exits after eight seconds without changing reminders. Source is under `src`; scheduler and persistence assertions are in `tests\CoreTests.cs`.
 
+GitHub Actions runs `build.ps1 -Test` on every push and pull request using `.github/workflows/ci.yml`. Successful runs provide a temporary `ReminderBuddy-Windows` build artifact. The interactive UI smoke test remains a local check because hosted runners do not provide a reliable interactive Windows desktop.
+
 ## Manual QA
 
 1. Create a fixed reminder for the next minute; verify it appears over another application without interrupting typing.
