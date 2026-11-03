@@ -26,7 +26,6 @@ DefaultDirName={localappdata}\Programs\ReminderBuddy
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
 OutputDir={#OutputRoot}
 OutputBaseFilename=ReminderBuddy-Setup-{#AppVersion}
 Compression=lzma2/max
