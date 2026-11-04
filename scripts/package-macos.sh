@@ -15,12 +15,15 @@ app="$output/Reminder Buddy.app"
 mkdir -p "$output"
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
-# Bundle managed assemblies so Apple's signing check does not treat loose .NET DLLs as unsigned nested code.
-dotnet publish "$root/src/ReminderBuddy.csproj" -c Release -r "$runtime" --self-contained true -p:UseAppHost=true -p:PublishSingleFile=true -o "$app/Contents/MacOS"
-if [[ -n "$(find "$app/Contents/MacOS" -type f -name '*.dll' -print -quit)" ]]; then
-    echo 'Mac publish left loose managed DLLs in Contents/MacOS; refusing to sign an invalid bundle.' >&2
-    exit 1
-fi
+# Contents/MacOS must contain only native code: bundle managed assemblies and omit loose debug symbols.
+dotnet publish "$root/src/ReminderBuddy.csproj" -c Release -r "$runtime" --self-contained true -p:UseAppHost=true -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false -o "$app/Contents/MacOS"
+while IFS= read -r -d '' binary; do
+    description="$(file -b "$binary")"
+    if [[ "$description" != *Mach-O* ]]; then
+        echo "Unexpected non-native file in Contents/MacOS: $binary ($description)" >&2
+        exit 1
+    fi
+done < <(find "$app/Contents/MacOS" -type f -print0)
 sed "s/__VERSION__/$version/g" "$root/installer/macos/Info.plist" > "$app/Contents/Info.plist"
 chmod +x "$app/Contents/MacOS/ReminderBuddy"
 plutil -lint "$app/Contents/Info.plist"
@@ -37,9 +40,11 @@ done
 iconutil -c icns "$iconset" -o "$app/Contents/Resources/ReminderBuddy.icns"
 
 # Ad-hoc signing is needed for local Apple Silicon execution. It is NOT Developer ID signing or notarization.
-while IFS= read -r -d '' file; do
-    if file -b "$file" | grep -q 'Mach-O'; then codesign --force --sign - "$file"; fi
-done < <(find "$app/Contents/MacOS" -type f -print0)
+# Sign nested native libraries first. Signing the bundle last also signs its main executable.
+while IFS= read -r -d '' binary; do
+    codesign --force --sign - "$binary"
+    codesign --verify --strict --verbose=2 "$binary"
+done < <(find "$app/Contents/MacOS" -type f ! -name ReminderBuddy -print0)
 codesign --force --sign - "$app"
 codesign --verify --strict --verbose=2 "$app"
 
