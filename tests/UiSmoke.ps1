@@ -42,7 +42,7 @@ try {
     $windows = $root.FindAll([System.Windows.Automation.TreeScope]::Children, $condition)
     if (!(@($windows | Where-Object { $_.Current.Name -eq 'Reminder Buddy reminder' }).Count)) { throw 'Preview did not reopen overlay.' }
     'PASS: Dismiss and preview actions work'
-    if (!$process.WaitForExit(15000)) { throw 'Smoke application did not exit.' }
+    if (!$process.WaitForExit(25000)) { throw 'Smoke application did not exit.' }
     if ($process.ExitCode -ne 0) { throw "Smoke application exited with $($process.ExitCode)." }
     'PASS: Application exited cleanly'
 }

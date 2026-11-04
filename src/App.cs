@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Windows;
-using System.Windows.Threading;
-using Microsoft.Win32;
-using Forms = System.Windows.Forms;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform;
+using Avalonia.Styling;
+using Avalonia.Themes.Fluent;
+using Avalonia.Threading;
 
 namespace ReminderBuddy
 {
@@ -19,35 +20,58 @@ namespace ReminderBuddy
         public SettingsWindow Settings;
         public bool Exiting;
         public bool SmokeTest;
-        private Forms.NotifyIcon tray;
+        private TrayIcon tray;
+        private IClassicDesktopStyleApplicationLifetime desktop;
         private DispatcherTimer timer;
         private readonly Queue<Reminder> queue = new Queue<Reminder>();
         private OverlayWindow overlay;
         private DateTime lastTick = DateTime.Now;
-        public static readonly string DataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ReminderBuddy");
+        public static readonly string DataDirectory = OperatingSystem.IsMacOS()
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Application Support", "ReminderBuddy")
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ReminderBuddy");
 
-        [STAThread]
-        public static void Main(string[] args)
+        public override void Initialize()
         {
-            bool smoke = args.Contains("--smoke-test");
-            using (var mutex = new Mutex(false, "Local\\ReminderBuddy-v1" + (smoke ? "-test" : "")))
-            {
-                if (!mutex.WaitOne(0, false))
-                {
-                    foreach (var process in Process.GetProcessesByName("ReminderBuddy"))
-                        if (process.Id != Process.GetCurrentProcess().Id && process.MainWindowHandle != IntPtr.Zero) { ShowWindow(process.MainWindowHandle, 9); SetForegroundWindow(process.MainWindowHandle); }
-                    return;
-                }
-                try
-                {
-                    var app = new BuddyApp { ShutdownMode = ShutdownMode.OnExplicitShutdown, SmokeTest = smoke };
-                    app.Start(args.Contains("--background"));
-                    app.Run();
-                }
-                catch (Exception ex) { Log(ex); MessageBox.Show(ex.Message, "Reminder Buddy could not start", MessageBoxButton.OK, MessageBoxImage.Error); }
-                finally { mutex.ReleaseMutex(); }
-            }
+            Name = "Reminder Buddy";
+            RequestedThemeVariant = ThemeVariant.Light;
+            Styles.Add(new FluentTheme());
+            var appMenu = new NativeMenu();
+            AddMenu(appMenu, "Open Reminder Buddy", () => { if (Settings != null) OpenSettings(); });
+            NativeMenu.SetMenu(this, appMenu);
         }
+
+        public override void OnFrameworkInitializationCompleted()
+        {
+            desktop = (IClassicDesktopStyleApplicationLifetime)ApplicationLifetime;
+            desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            var args = desktop.Args ?? Array.Empty<string>();
+            SmokeTest = args.Contains("--smoke-test");
+            Dispatcher.UIThread.UnhandledException += async delegate(object sender, DispatcherUnhandledExceptionEventArgs e)
+            {
+                Log(e.Exception);
+                e.Handled = true;
+                if (Settings != null)
+                {
+                    OpenSettings();
+                    await Dialogs.Show(Settings, e.Exception.Message, "Reminder Buddy");
+                }
+            };
+            try { Start(args.Contains("--background")); }
+            catch (Exception ex) { ShowStartupError(ex); }
+            base.OnFrameworkInitializationCompleted();
+        }
+
+        private async void ShowStartupError(Exception ex)
+        {
+            Log(ex);
+            var owner = new Window { Title = "Reminder Buddy", Width = 440, Height = 160 };
+            desktop.MainWindow = owner;
+            owner.Show();
+            await Dialogs.Show(owner, ex.Message, "Reminder Buddy could not start");
+            desktop.Shutdown(1);
+        }
+
+        public static WindowIcon LoadIcon() { return new WindowIcon(AssetLoader.Open(new Uri("avares://ReminderBuddy/Assets/ReminderBuddy.ico"))); }
 
         private void Start(bool background)
         {
@@ -64,35 +88,42 @@ namespace ReminderBuddy
             }
             Storage = new Store(Path.Combine(DataDirectory, SmokeTest ? "smoke-settings.json" : "settings.json"));
             Data = SmokeTest ? new Preferences() : Storage.Load();
-            DispatcherUnhandledException += delegate(object sender, DispatcherUnhandledExceptionEventArgs e) { Log(e.Exception); MessageBox.Show(e.Exception.Message, "Reminder Buddy", MessageBoxButton.OK, MessageBoxImage.Error); e.Handled = true; };
             Settings = new SettingsWindow(this);
-            MainWindow = Settings;
-            tray = new Forms.NotifyIcon { Icon = System.Drawing.Icon.ExtractAssociatedIcon(Process.GetCurrentProcess().MainModule.FileName), Text = "Reminder Buddy", Visible = true };
-            var menu = new Forms.ContextMenuStrip();
-            menu.Items.Add("Open Reminder Buddy", null, delegate { OpenSettings(); });
-            menu.Items.Add(new Forms.ToolStripSeparator());
-            menu.Items.Add("Pause for 30 minutes", null, delegate { Pause(DateTime.Now.AddMinutes(30)); });
-            menu.Items.Add("Pause for 1 hour", null, delegate { Pause(DateTime.Now.AddHours(1)); });
-            menu.Items.Add("Pause until tomorrow", null, delegate { Pause(DateTime.Today.AddDays(1)); });
-            menu.Items.Add("Resume reminders", null, delegate { Pause(DateTime.MinValue); });
-            menu.Items.Add(new Forms.ToolStripSeparator());
-            menu.Items.Add("Exit", null, delegate { Quit(); });
-            tray.ContextMenuStrip = menu;
-            tray.DoubleClick += delegate { OpenSettings(); };
+            if (!background || SmokeTest) desktop.MainWindow = Settings;
+            tray = new TrayIcon { Icon = LoadIcon(), ToolTipText = "Reminder Buddy", IsVisible = true };
+            var menu = new NativeMenu();
+            AddMenu(menu, "Open Reminder Buddy", OpenSettings);
+            menu.Items.Add(new NativeMenuItemSeparator());
+            AddMenu(menu, "Pause for 30 minutes", () => Pause(DateTime.Now.AddMinutes(30)));
+            AddMenu(menu, "Pause for 1 hour", () => Pause(DateTime.Now.AddHours(1)));
+            AddMenu(menu, "Pause until tomorrow", () => Pause(DateTime.Today.AddDays(1)));
+            AddMenu(menu, "Resume reminders", () => Pause(DateTime.MinValue));
+            menu.Items.Add(new NativeMenuItemSeparator());
+            AddMenu(menu, "Exit", Quit);
+            tray.Menu = menu;
+            TrayIcon.SetIcons(this, new TrayIcons { tray });
+            tray.Clicked += delegate { OpenSettings(); };
             timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             timer.Tick += Tick;
             timer.Start();
             if (!background || SmokeTest) OpenSettings();
             if (SmokeTest)
             {
-                Preview(new Reminder { Name = "Drink water", Message = "Time for a water break. You've got this!", Persistent = false, DisplaySeconds = 5 });
-                var exit = new DispatcherTimer { Interval = TimeSpan.FromSeconds(8) };
+                Preview(new Reminder { Name = "Drink water", Message = "Time for a water break. You've got this!", Persistent = true });
+                var exit = new DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
                 exit.Tick += delegate { exit.Stop(); Quit(); };
                 exit.Start();
             }
         }
 
-        public void OpenSettings() { Settings.Show(); Settings.WindowState = WindowState.Normal; Settings.Activate(); Settings.RefreshStatus(); }
+        private static void AddMenu(NativeMenu menu, string title, Action action)
+        {
+            var item = new NativeMenuItem(title);
+            item.Click += delegate { action(); };
+            menu.Items.Add(item);
+        }
+
+        public void OpenSettings() { desktop.MainWindow = Settings; Settings.Show(); Settings.WindowState = WindowState.Normal; Settings.Activate(); Settings.RefreshStatus(); }
         public void Save() { if (!SmokeTest) Storage.Save(Data); }
         public void Pause(DateTime until)
         {
@@ -132,7 +163,7 @@ namespace ReminderBuddy
             if (jumped && candidates.Count > 1) candidates = candidates.Take(1).ToList();
             foreach (var reminder in candidates)
                 if (!queue.Any(r => r.Id == reminder.Id) && (overlay == null || overlay.ReminderId != reminder.Id)) queue.Enqueue(reminder);
-            if (overlay == null && queue.Count > 0 && now >= Data.PauseUntil && (!Data.DeferFullScreen || !IsFullScreen())) ShowReminder(queue.Dequeue(), false);
+            if (overlay == null && queue.Count > 0 && now >= Data.PauseUntil && (!Data.DeferFullScreen || !Platform.IsFullScreen(Settings))) ShowReminder(queue.Dequeue(), false);
             if (Settings.IsVisible) Settings.RefreshStatus();
         }
 
@@ -154,8 +185,7 @@ namespace ReminderBuddy
             overlay = window;
             window.Closed += delegate { if (overlay == window) overlay = null; };
             window.Show();
-            if (reminder.Sound == "Chime") System.Media.SystemSounds.Asterisk.Play();
-            if (reminder.Sound == "Bell") System.Media.SystemSounds.Exclamation.Play();
+            Platform.PlaySound(reminder.Sound);
         }
 
         public void RemovePending(string id)
@@ -172,46 +202,14 @@ namespace ReminderBuddy
             Exiting = true;
             if (timer != null) timer.Stop();
             if (overlay != null) overlay.Close();
-            if (tray != null) { tray.Visible = false; tray.Dispose(); }
-            Shutdown();
+            if (tray != null) { tray.IsVisible = false; tray.Dispose(); }
+            desktop.Shutdown();
         }
 
-        public static bool StartsWithWindows()
-        {
-            using (var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run")) return key != null && key.GetValue("ReminderBuddy") != null;
-        }
-        public static void SetStartup(bool enabled)
-        {
-            using (var key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run"))
-            {
-                if (enabled) key.SetValue("ReminderBuddy", "\"" + Process.GetCurrentProcess().MainModule.FileName + "\" --background"); else key.DeleteValue("ReminderBuddy", false);
-                key.DeleteValue("TaskbarBuddy", false);
-            }
-        }
         public static void Log(Exception error)
         {
             try { Directory.CreateDirectory(DataDirectory); File.AppendAllText(Path.Combine(DataDirectory, "error.log"), DateTime.Now + " " + error + Environment.NewLine); } catch { }
         }
 
-        private static bool IsFullScreen()
-        {
-            IntPtr handle = GetForegroundWindow();
-            if (handle == IntPtr.Zero || handle == GetShellWindow() || handle == GetDesktopWindow()) return false;
-            var className = new System.Text.StringBuilder(256);
-            GetClassName(handle, className, className.Capacity);
-            if (className.ToString() == "WorkerW" || className.ToString() == "Progman") return false;
-            RectNative rect;
-            if (!GetWindowRect(handle, out rect)) return false;
-            var screen = Forms.Screen.FromHandle(handle).Bounds;
-            return rect.Left <= screen.Left && rect.Top <= screen.Top && rect.Right >= screen.Right && rect.Bottom >= screen.Bottom;
-        }
-        [StructLayout(LayoutKind.Sequential)] private struct RectNative { public int Left, Top, Right, Bottom; }
-        [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr h, out RectNative rect);
-        [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
-        [DllImport("user32.dll")] private static extern IntPtr GetShellWindow();
-        [DllImport("user32.dll")] private static extern IntPtr GetDesktopWindow();
-        [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(IntPtr h, System.Text.StringBuilder text, int count);
-        [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr h, int command);
-        [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr h);
     }
 }

@@ -1,4 +1,4 @@
-name: Windows CI
+name: Desktop CI
 
 on:
   push:
@@ -9,23 +9,49 @@ permissions:
 
 jobs:
   build-and-test:
-    name: Build and test
-    runs-on: windows-latest
-    timeout-minutes: 10
-
+    name: Test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Build application and run core tests
-        shell: powershell
-        run: .\build.ps1 -Test
-
-      - name: Upload portable application
-        if: success()
-        uses: actions/upload-artifact@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
         with:
-          name: ReminderBuddy-Windows
-          path: dist/ReminderBuddy.exe
+          dotnet-version: '10.0.x'
+      - name: Core regression tests
+        run: dotnet run --project tests/CoreTests.csproj -c Release
+      - name: Build desktop app
+        run: dotnet build src/ReminderBuddy.csproj -c Release
+
+  macos-package:
+    name: Package Mac beta (${{ matrix.runtime }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runtime: osx-arm64
+            os: macos-15
+          - runtime: osx-x64
+            os: macos-15-intel
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build app bundle
+        run: bash scripts/package-macos.sh "$RUNTIME"
+        env:
+          RUNTIME: ${{ matrix.runtime }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ReminderBuddy-${{ matrix.runtime }}-beta
+          path: |
+            release/*.zip
+            release/SHA256SUMS-*.txt
           if-no-files-found: error
           retention-days: 7

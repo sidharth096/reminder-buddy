@@ -19,6 +19,15 @@ Thanks for helping improve Reminder Buddy. Bug fixes, accessibility improvements
 
 Run the required checks before opening a pull request:
 
+On any development platform, install the .NET 10 SDK and run:
+
+```sh
+dotnet build src/ReminderBuddy.csproj -c Release
+dotnet run --project tests/CoreTests.csproj -c Release
+```
+
+On Windows, also publish and run the UI smoke test:
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\build.ps1 -Test
 powershell -ExecutionPolicy Bypass -File .\tests\UiSmoke.ps1
@@ -32,7 +41,7 @@ Expected result: all core checks pass, the UI smoke test verifies all four chara
 2. Include screenshots for interface changes.
 3. Add or update the smallest test that proves non-trivial behavior.
 4. Update `README.md`, `docs\DEVELOPMENT.md`, or `CHANGELOG.md` when behavior or contributor steps change.
-5. Confirm the **Windows CI** check passes.
+5. Confirm the **Desktop CI** build, test, and Mac packaging checks pass.
 
 By contributing, you agree that your contribution is licensed under the repository's [MIT License](LICENSE) and that you will follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 

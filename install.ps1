@@ -5,7 +5,7 @@ $source = Join-Path $PSScriptRoot 'dist\ReminderBuddy.exe'
 if (!(Test-Path -LiteralPath $source)) { throw 'Run build.ps1 first.' }
 if (Get-Process ReminderBuddy, TaskbarBuddy -ErrorAction SilentlyContinue) { throw 'Exit Reminder Buddy (and any older Taskbar Buddy version) from its tray menu before installing.' }
 New-Item -ItemType Directory -Force -Path $target | Out-Null
-Copy-Item -LiteralPath $source -Destination (Join-Path $target 'ReminderBuddy.exe') -Force
+Copy-Item -Path (Join-Path $PSScriptRoot 'dist\*') -Destination $target -Recurse -Force
 $shell = New-Object -ComObject WScript.Shell
 $shortcut = $shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Programs')) 'Reminder Buddy.lnk'))
 $shortcut.TargetPath = Join-Path $target 'ReminderBuddy.exe'

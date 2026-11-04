@@ -175,6 +175,7 @@ namespace ReminderBuddy
                 if (data.Snoozes == null) data.Snoozes = new List<SnoozedReminder>();
                 foreach (var reminder in data.Reminders) if (reminder != null) reminder.CharacterId = CharacterCatalog.NormalizeId(reminder.CharacterId);
                 if (data.Reminders.Any(r => r == null || string.IsNullOrWhiteSpace(r.Id) || r.Validate() != null) || data.Reminders.Select(r => r.Id).Distinct().Count() != data.Reminders.Count) throw new SerializationException("Invalid reminder.");
+                if (data.Snoozes.Any(s => s == null || string.IsNullOrWhiteSpace(s.ReminderId))) throw new SerializationException("Invalid snooze.");
                 return data;
             }
         }
