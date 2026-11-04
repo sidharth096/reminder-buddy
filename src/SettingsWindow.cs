@@ -1,11 +1,14 @@
 using System;
 using System.Globalization;
 using System.Linq;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media;
-using System.Windows.Interop;
-using System.Windows.Media.Imaging;
+using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Layout;
+using Avalonia.Media;
+using Avalonia.Styling;
+using Avalonia.Input;
 
 namespace ReminderBuddy
 {
@@ -29,38 +32,39 @@ namespace ReminderBuddy
         {
             app = owner;
             Title = "Reminder Buddy";
-            using (var icon = System.Drawing.Icon.ExtractAssociatedIcon(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName))
-                if (icon != null) Icon = Imaging.CreateBitmapSourceFromHIcon(icon.Handle, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+            Icon = BuddyApp.LoadIcon();
             Width = 1060; Height = 790; MinWidth = 850; MinHeight = 600;
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
             Background = Brush("#F3F5F1"); Foreground = Brush("#19352E");
-            FontFamily = new FontFamily("Segoe UI"); FontSize = 14;
-            var buttonStyle = new Style(typeof(Button));
-            buttonStyle.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(13, 8, 13, 8)));
-            buttonStyle.Setters.Add(new Setter(FrameworkElement.MarginProperty, new Thickness(0, 0, 8, 6)));
-            buttonStyle.Setters.Add(new Setter(Control.CursorProperty, System.Windows.Input.Cursors.Hand));
-            Resources.Add(typeof(Button), buttonStyle);
-            var boxStyle = new Style(typeof(TextBox));
-            boxStyle.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(9, 7, 9, 7)));
-            boxStyle.Setters.Add(new Setter(Control.BorderBrushProperty, Brush("#A7BDB2")));
-            Resources.Add(typeof(TextBox), boxStyle);
-            var comboStyle = new Style(typeof(ComboBox));
-            comboStyle.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(7)));
-            Resources.Add(typeof(ComboBox), comboStyle);
+            FontFamily = OperatingSystem.IsMacOS() ? FontFamily.Default : new FontFamily("Segoe UI"); FontSize = 14;
+            var buttonStyle = new Style(x => x.OfType<Button>());
+            buttonStyle.Setters.Add(new Setter(TemplatedControl.PaddingProperty, new Thickness(13, 8, 13, 8)));
+            buttonStyle.Setters.Add(new Setter(Control.MarginProperty, new Thickness(0, 0, 8, 6)));
+            buttonStyle.Setters.Add(new Setter(InputElement.CursorProperty, new Cursor(StandardCursorType.Hand)));
+            Styles.Add(buttonStyle);
+            var boxStyle = new Style(x => x.OfType<TextBox>());
+            boxStyle.Setters.Add(new Setter(TemplatedControl.PaddingProperty, new Thickness(9, 7, 9, 7)));
+            boxStyle.Setters.Add(new Setter(TemplatedControl.BorderBrushProperty, Brush("#A7BDB2")));
+            Styles.Add(boxStyle);
+            var comboStyle = new Style(x => x.OfType<ComboBox>());
+            comboStyle.Setters.Add(new Setter(TemplatedControl.PaddingProperty, new Thickness(7)));
+            Styles.Add(comboStyle);
 
             var root = new DockPanel { Margin = new Thickness(24) };
             Content = root;
             var header = new StackPanel { Margin = new Thickness(0, 0, 0, 18) };
-            header.Children.Add(new TextBlock { Text = "REMINDER BUDDY", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = Brush("#427663") });
+            header.Children.Add(new TextBlock { Text = "REMINDER BUDDY", FontSize = 12, FontWeight = FontWeight.Bold, Foreground = Brush("#427663") });
             header.Children.Add(new TextBlock { Text = "Small nudges. Better days.", FontFamily = new FontFamily("Georgia"), FontSize = 30, Margin = new Thickness(0, 5, 0, 5) });
             status.FontSize = 12; header.Children.Add(status);
             DockPanel.SetDock(header, Dock.Top); root.Children.Add(header);
             var footer = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 14, 0, 0) };
-            var startup = new CheckBox { Content = "Start with Windows", IsChecked = BuddyApp.StartsWithWindows(), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 22, 0) };
-            startup.Click += delegate { try { BuddyApp.SetStartup(startup.IsChecked == true); } catch (Exception ex) { startup.IsChecked = BuddyApp.StartsWithWindows(); MessageBox.Show(ex.Message, "Startup setting"); } };
+            var startup = new CheckBox { Content = OperatingSystem.IsMacOS() ? "Start at login" : "Start with Windows", IsChecked = Platform.StartsAtLogin(), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 22, 0) };
+            startup.Click += async delegate { try { Platform.SetStartup(startup.IsChecked == true); } catch (Exception ex) { startup.IsChecked = Platform.StartsAtLogin(); await Dialogs.Show(this, ex.Message, "Startup setting"); } };
             footer.Children.Add(startup);
             var full = new CheckBox { Content = "Wait during full-screen apps", IsChecked = app.Data.DeferFullScreen, VerticalAlignment = VerticalAlignment.Center };
             full.Click += delegate { app.Data.DeferFullScreen = full.IsChecked == true; app.Save(); };
+            full.IsEnabled = Platform.SupportsFullScreenDetection;
+            if (!full.IsEnabled) ToolTip.SetTip(full, "Full-screen detection is not available on this platform yet.");
             footer.Children.Add(full);
             DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
             var columns = new Grid();
@@ -71,19 +75,19 @@ namespace ReminderBuddy
 
             var sidebar = new DockPanel(); columns.Children.Add(sidebar);
             var actions = new WrapPanel();
-            actions.Children.Add(Button("+ New reminder", delegate { if (CanDiscard()) { list.SelectedIndex = -1; LoadEditor(new Reminder(), null); } }));
+            actions.Children.Add(Button("+ New reminder", async delegate { if (await CanDiscard()) { list.SelectedIndex = -1; LoadEditor(new Reminder(), null); } }));
             actions.Children.Add(Button("Duplicate", Duplicate));
             actions.Children.Add(Button("Delete", Delete));
             DockPanel.SetDock(actions, Dock.Bottom); sidebar.Children.Add(actions);
-            var hint = new TextBlock { Text = "YOUR REMINDERS", FontSize = 11, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 10) };
+            var hint = new TextBlock { Text = "YOUR REMINDERS", FontSize = 11, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 0, 10) };
             DockPanel.SetDock(hint, Dock.Top); sidebar.Children.Add(hint);
             list.Background = Brushes.White; list.BorderBrush = Brush("#D6DFD8");
-            list.SelectionChanged += delegate
+            list.SelectionChanged += async delegate
             {
                 if (loading) return;
                 var item = list.SelectedItem as ListBoxItem;
                 if (item == null) return;
-                if (!CanDiscard()) { RefreshList(editingId); return; }
+                if (!await CanDiscard()) { RefreshList(editingId); return; }
                 var reminder = (Reminder)item.Tag;
                 LoadEditor(reminder, reminder.Id);
             };
@@ -135,25 +139,26 @@ namespace ReminderBuddy
             buttons.Children.Add(save);
             buttons.Children.Add(Button("Preview animation", delegate { Reminder r; if (ReadEditor(out r)) app.Preview(r); }));
             editor.Children.Add(buttons);
-            schedule.SelectionChanged += delegate { fixedFields.Visibility = schedule.SelectedIndex == 0 ? Visibility.Visible : Visibility.Collapsed; intervalFields.Visibility = schedule.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed; MarkDirty(); };
-            display.SelectionChanged += delegate { durationFields.Visibility = display.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed; MarkDirty(); };
+            schedule.SelectionChanged += delegate { fixedFields.IsVisible = schedule.SelectedIndex == 0; intervalFields.IsVisible = schedule.SelectedIndex == 1; MarkDirty(); };
+            display.SelectionChanged += delegate { durationFields.IsVisible = display.SelectedIndex == 1; MarkDirty(); };
             sound.SelectionChanged += delegate { MarkDirty(); };
             foreach (var box in new[] { name, message, time, interval, start, end, duration }) box.TextChanged += delegate { MarkDirty(); };
-            foreach (var check in days.Concat(new[] { enabled })) { check.Checked += delegate { MarkDirty(); }; check.Unchecked += delegate { MarkDirty(); }; }
-            Closing += delegate(object sender, System.ComponentModel.CancelEventArgs args)
+            foreach (var check in days.Concat(new[] { enabled })) check.IsCheckedChanged += delegate { MarkDirty(); };
+            Closing += async delegate(object sender, WindowClosingEventArgs args)
             {
-                if (!app.Exiting) { args.Cancel = true; if (CanDiscard()) { dirty = false; Hide(); } }
+                if (!app.Exiting) { args.Cancel = true; if (await CanDiscard()) { dirty = false; Hide(); } }
             };
             RefreshList(null);
             LoadEditor(new Reminder { Name = "Drink water", Message = "Time to hydrate. Drink a glass of water!", IsInterval = true }, null);
         }
 
         private void MarkDirty() { if (!loading) { dirty = true; error.Text = "Unsaved changes"; } }
-        private bool CanDiscard() { return !dirty || MessageBox.Show(this, "Discard your unsaved reminder changes?", "Unsaved reminder", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes; }
-        private static Brush Brush(string hex) { return (Brush)new BrushConverter().ConvertFromString(hex); }
-        private static Button Button(string title, Action action) { var b = new Button { Content = title }; b.Click += delegate { action(); }; return b; }
-        private static void Label(Panel panel, string text) { panel.Children.Add(new TextBlock { Text = text, Margin = new Thickness(0, 12, 0, 5), FontWeight = FontWeights.SemiBold }); }
-        private static void AddField(Panel panel, string text, UIElement field) { Label(panel, text); panel.Children.Add(field); }
+        private Task<bool> CanDiscard() { return dirty ? Dialogs.Show(this, "Discard your unsaved reminder changes?", "Unsaved reminder", true) : Task.FromResult(true); }
+        private static IBrush Brush(string hex) { return Avalonia.Media.Brush.Parse(hex); }
+        private Button Button(string title, Action action) { var b = new Button { Content = title }; b.Click += async delegate { try { action(); } catch (Exception ex) { BuddyApp.Log(ex); await Dialogs.Show(this, ex.Message, "Reminder Buddy"); } }; return b; }
+        private Button Button(string title, Func<Task> action) { var b = new Button { Content = title }; b.Click += async delegate { try { await action(); } catch (Exception ex) { BuddyApp.Log(ex); await Dialogs.Show(this, ex.Message, "Reminder Buddy"); } }; return b; }
+        private static void Label(Panel panel, string text) { panel.Children.Add(new TextBlock { Text = text, Margin = new Thickness(0, 12, 0, 5), FontWeight = FontWeight.SemiBold }); }
+        private static void AddField(Panel panel, string text, Control field) { Label(panel, text); Avalonia.Automation.AutomationProperties.SetName(field, text); panel.Children.Add(field); }
         private void SetDays(int mask) { for (int i = 0; i < 7; i++) days[i].IsChecked = (mask & (1 << i)) != 0; }
 
         private void LoadEditor(Reminder r, string id)
@@ -195,7 +200,9 @@ namespace ReminderBuddy
                 frame.Child = new Walker { CharacterId = choice.Id, Width = 55, Height = 76, Walking = false };
                 content.Children.Add(frame);
                 content.Children.Add(new TextBlock { Text = choice.Name, FontSize = 11, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap });
-                var button = new Button { Tag = choice.Id, Content = content, Padding = new Thickness(5), Margin = new Thickness(0, 0, 8, 8), ToolTip = "Select " + choice.Name };
+                var button = new Button { Tag = choice.Id, Content = content, Padding = new Thickness(5), Margin = new Thickness(0, 0, 8, 8) };
+                ToolTip.SetTip(button, "Select " + choice.Name);
+                Avalonia.Automation.AutomationProperties.SetName(button, choice.Name);
                 button.Click += delegate { characterId = selected.Id; UpdateCharacterPicker(); MarkDirty(); };
                 characterPicker.Children.Add(button);
             }
@@ -233,32 +240,32 @@ namespace ReminderBuddy
             foreach (var r in app.Data.Reminders)
             {
                 var content = new StackPanel { Margin = new Thickness(9, 10, 9, 10), Width = 238 };
-                content.Children.Add(new TextBlock { Text = (r.Enabled ? "" : "[Off] ") + r.Name, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
+                content.Children.Add(new TextBlock { Text = (r.Enabled ? "" : "[Off] ") + r.Name, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap });
                 content.Children.Add(new TextBlock { Text = r.Summary, FontSize = 11, TextWrapping = TextWrapping.Wrap, Foreground = Brush("#577367"), Margin = new Thickness(0, 6, 0, 0) });
                 var item = new ListBoxItem { Tag = r, Content = content }; list.Items.Add(item); if (r.Id == selected) list.SelectedItem = item;
             }
             loading = false;
         }
-        private void Duplicate()
+        private async Task Duplicate()
         {
             var existing = app.Data.Reminders.FirstOrDefault(r => r.Id == editingId);
             if (existing == null) { error.Text = "Select a saved reminder to duplicate."; return; }
-            if (!CanDiscard()) return;
+            if (!await CanDiscard()) return;
             var copy = existing.Copy(true); copy.Name = existing.Name.Substring(0, Math.Min(existing.Name.Length, 73)) + " (copy)";
             list.SelectedIndex = -1; LoadEditor(copy, null); dirty = true; error.Text = "Copy ready. Save to add it.";
         }
-        private void Delete()
+        private async Task Delete()
         {
             var existing = app.Data.Reminders.FirstOrDefault(r => r.Id == editingId);
             if (existing == null) return;
-            if (MessageBox.Show(this, "Delete \"" + existing.Name + "\"?", "Delete reminder", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            if (!await Dialogs.Show(this, "Delete \"" + existing.Name + "\"?", "Delete reminder", true)) return;
             int index = app.Data.Reminders.IndexOf(existing); app.Data.Reminders.Remove(existing);
             try { app.Save(); } catch { app.Data.Reminders.Insert(index, existing); throw; }
             app.RemovePending(existing.Id); app.Save(); RefreshList(null); LoadEditor(new Reminder(), null);
         }
         public void RefreshStatus()
         {
-            status.Text = (app.Data.PauseUntil > DateTime.Now ? "Paused until " + app.Data.PauseUntil.ToString("ddd HH:mm") : "Running in your tray") + "  |  " + app.Data.Reminders.Count(r => r.Enabled) + " active reminders  |  Times use your PC's local clock";
+            status.Text = (app.Data.PauseUntil > DateTime.Now ? "Paused until " + app.Data.PauseUntil.ToString("ddd HH:mm") : OperatingSystem.IsMacOS() ? "Running in your menu bar" : "Running in your tray") + "  |  " + app.Data.Reminders.Count(r => r.Enabled) + " active reminders  |  Times use your computer's local clock";
         }
     }
 }

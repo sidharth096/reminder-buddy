@@ -16,7 +16,7 @@ New-Item -ItemType Directory -Path $release | Out-Null
 $portableName = "ReminderBuddy-Windows-$version"
 $portable = Join-Path $release $portableName
 New-Item -ItemType Directory -Path $portable | Out-Null
-Copy-Item -LiteralPath (Join-Path $root 'dist\ReminderBuddy.exe') -Destination $portable
+Copy-Item -Path (Join-Path $root 'dist\*') -Destination $portable -Recurse
 Copy-Item -LiteralPath (Join-Path $root 'LICENSE') -Destination $portable
 Copy-Item -LiteralPath (Join-Path $root 'README.md') -Destination $portable
 Copy-Item -LiteralPath (Join-Path $root 'VERSION') -Destination $portable

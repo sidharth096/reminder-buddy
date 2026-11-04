@@ -53,6 +53,15 @@ class CoreTests
             Check(store.Load().PauseUntil == data.PauseUntil && File.Exists(store.FilePath + ".bak"), "Atomic replace and backup");
             File.WriteAllText(store.FilePath, "invalid JSON");
             Check(store.Load().Reminders.Count == 1, "Recover corrupted settings from backup");
+            store.Save(data);
+            data.Snoozes.Add(null);
+            store.Save(data);
+            Check(store.Load().Snoozes.Count == 1, "Reject null snooze and recover the valid backup");
+            string legacy = Path.Combine(dir, "legacy.json");
+            File.WriteAllText(legacy, "{\"Reminders\":[{\"Id\":\"legacy-reminder\",\"Name\":\"Water\",\"Message\":\"Drink water\",\"Days\":62,\"Enabled\":true,\"IsInterval\":false,\"TimeMinutes\":540,\"IntervalMinutes\":60,\"StartMinutes\":540,\"EndMinutes\":1080,\"Persistent\":true,\"DisplaySeconds\":15,\"Sound\":\"None\",\"CharacterId\":\"messi\",\"LastDelivered\":\"2026-10-26T09:00:00.0000000\"}],\"DeferFullScreen\":true,\"PauseUntil\":\"0001-01-01T00:00:00.0000000\",\"Snoozes\":[]}");
+            var migrated = new Store(legacy).Load();
+            Check(migrated.Reminders[0].Id == "legacy-reminder" && migrated.Reminders[0].CharacterId == "tom" && migrated.Reminders[0].LastDelivered == Monday,
+                "Existing Windows JSON loads with identity, date, and character migration intact");
             Console.WriteLine("All " + checks + " checks passed."); return 0;
         }
         catch (Exception e) { Console.Error.WriteLine(e); return 1; }

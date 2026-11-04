@@ -1,36 +1,18 @@
-param([switch]$Test)
+param([switch]$Test, [string]$Runtime = 'win-x64')
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
-$compiler = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
-$framework = Split-Path $compiler
 if (!(Test-Path -LiteralPath $root)) { throw 'Project folder missing.' }
-if (!(Test-Path -LiteralPath $compiler)) { throw '.NET Framework 4.x is required.' }
+if (!(Get-Command dotnet -ErrorAction SilentlyContinue)) { throw 'Install the .NET 10 SDK, then reopen PowerShell.' }
+if ($Runtime -notin @('win-x64', 'win-arm64')) { throw 'Use win-x64 or win-arm64. For macOS, use scripts/package-macos.sh.' }
 $output = Join-Path $root 'dist'
-New-Item -ItemType Directory -Force -Path $output | Out-Null
 $version = (Get-Content -LiteralPath (Join-Path $root 'VERSION') -Raw).Trim()
 if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'VERSION must use major.minor.patch format.' }
-$assemblyInfo = Join-Path $output 'AssemblyInfo.g.cs'
-$assemblyVersion = "$version.0"
-@"
-using System.Reflection;
-[assembly: AssemblyTitle("Reminder Buddy")]
-[assembly: AssemblyProduct("Reminder Buddy")]
-[assembly: AssemblyCompany("sidharth")]
-[assembly: AssemblyCopyright("Copyright (c) 2026 sidharth")]
-[assembly: AssemblyVersion("$assemblyVersion")]
-[assembly: AssemblyFileVersion("$assemblyVersion")]
-"@ | Set-Content -LiteralPath $assemblyInfo -Encoding UTF8
-$refs = @('System.dll', 'System.Core.dll', 'System.Runtime.Serialization.dll', 'System.Xml.dll', 'System.Xaml.dll', 'System.Windows.Forms.dll', 'System.Drawing.dll', 'WPF\WindowsBase.dll', 'WPF\PresentationCore.dll', 'WPF\PresentationFramework.dll') | ForEach-Object { '/reference:' + (Join-Path $framework $_) }
-$sources = @('Core.cs', 'App.cs', 'SettingsWindow.cs', 'OverlayWindow.cs') | ForEach-Object { Join-Path $root "src\$_" }
-$sources += $assemblyInfo
-$icon = Join-Path $root 'assets\ReminderBuddy.ico'
-if (!(Test-Path -LiteralPath $icon)) { throw 'App icon is missing. Run scripts\generate-icon.ps1.' }
-& $compiler /nologo /target:winexe /optimize+ /platform:anycpu "/win32manifest:$root\app.manifest" "/win32icon:$icon" "/out:$output\ReminderBuddy.exe" $refs $sources
-if ($LASTEXITCODE -ne 0) { throw 'Application compilation failed.' }
 if ($Test) {
-    & $compiler /nologo /target:exe "/out:$output\CoreTests.exe" $refs "$root\src\Core.cs" "$root\tests\CoreTests.cs"
-    if ($LASTEXITCODE -ne 0) { throw 'Test compilation failed.' }
-    & "$output\CoreTests.exe"
+    dotnet run --project (Join-Path $root 'tests\CoreTests.csproj') -c Release
     if ($LASTEXITCODE -ne 0) { throw 'Tests failed.' }
 }
+if (Get-Process ReminderBuddy -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq (Join-Path $output 'ReminderBuddy.exe') }) { throw 'Exit the dist copy of Reminder Buddy before rebuilding it.' }
+if (Test-Path -LiteralPath $output) { Remove-Item -LiteralPath $output -Recurse -Force }
+dotnet publish (Join-Path $root 'src\ReminderBuddy.csproj') -c Release -r $Runtime --self-contained true -o $output
+if ($LASTEXITCODE -ne 0) { throw 'Application publish failed.' }
 "Built: $output\ReminderBuddy.exe"
