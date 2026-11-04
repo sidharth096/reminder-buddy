@@ -15,7 +15,12 @@ app="$output/Reminder Buddy.app"
 mkdir -p "$output"
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
-dotnet publish "$root/src/ReminderBuddy.csproj" -c Release -r "$runtime" --self-contained true -p:UseAppHost=true -o "$app/Contents/MacOS"
+# Bundle managed assemblies so Apple's signing check does not treat loose .NET DLLs as unsigned nested code.
+dotnet publish "$root/src/ReminderBuddy.csproj" -c Release -r "$runtime" --self-contained true -p:UseAppHost=true -p:PublishSingleFile=true -o "$app/Contents/MacOS"
+if [[ -n "$(find "$app/Contents/MacOS" -type f -name '*.dll' -print -quit)" ]]; then
+    echo 'Mac publish left loose managed DLLs in Contents/MacOS; refusing to sign an invalid bundle.' >&2
+    exit 1
+fi
 sed "s/__VERSION__/$version/g" "$root/installer/macos/Info.plist" > "$app/Contents/Info.plist"
 chmod +x "$app/Contents/MacOS/ReminderBuddy"
 plutil -lint "$app/Contents/Info.plist"
